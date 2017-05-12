@@ -1,0 +1,17 @@
+{
+  "name" : "Zef::Reporter",
+  "source-url" : "",
+  "perl" : "6.c",
+  "resources" : [ ],
+  "build-depends" : [ ],
+  "provides" : {
+    "Zef::Reporter" : "lib/Zef/Reporter.pm6"
+  },
+  "depends" : [ ],
+  "description" : "blah blah blah",
+  "test-depends" : [ ],
+  "version" : "*",
+  "authors" : [
+    "Breno G. de Oliveira"
+  ]
+}
