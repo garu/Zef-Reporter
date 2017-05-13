@@ -13,54 +13,83 @@ class Zef::Reporter does Messenger does Reporter {
         if self.probe {
             try require Net::HTTP::POST;
             my $candi := $event.<payload>;
-            my $response = ::('Net::HTTP::POST')("http://testers.perl6.org/report", body => to-json({
-                :name($candi.dist.name),
-                :version(first *.defined, $candi.dist.meta<ver version>),
-                :dependencies($candi.dist.meta<depends>),
-                :metainfo($candi.dist.meta.hash),
-                :build-output($candi.^find_method('build-results') ?? $candi.build-results.Str !! Str),
-                :build-passed($candi.^find_method('build-results') ?? $candi.build-results.map(*.so).all.so !! True),
-                :test-output($candi.^find_method('test-results') ?? $candi.test-results.Str !! Str),
-                :test-passed($candi.^find_method('test-results') ?? $candi.test-results.map(*.so).all.so !! True),
-                :distro({
-                    :name($*DISTRO.name),
-                    :version($*DISTRO.version.Str),
-                    :auth($*DISTRO.auth),
-                    :release($*DISTRO.release),
+            my $response = ::('Net::HTTP::POST')("http://api.cpantesters.org/v3/report", body => to-json({
+                :reporter({
+                    :email( $*HOME.child(q|.cpanreporter/config.ini|).lines>>.split("=").grep( *[0] eq "email_from" ).map( *[1] )[0] )
                 }),
-                :kernel({
-                    :name($*KERNEL.name),
-                    :version($*KERNEL.version.Str),
-                    :auth($*KERNEL.auth),
-                    :release($*KERNEL.release),
-                    :hardware($*KERNEL.hardware),
-                    :arch($*KERNEL.arch),
-                    :bits($*KERNEL.bits),
-                }),
-                :perl({
-                    :name($*PERL.name),
-                    :version($*PERL.version.Str),
-                    :auth($*PERL.auth),
-                    :compiler({
-                        :name($*PERL.compiler.name),
+                :environment({
+                    :user_agent( $?PACKAGE ~ ' ' ~ $?PACKAGE.^ver ),
+                    :language({
+                        :name<Perl 6>,
+                        :implementation($*PERL.compiler.name)
                         :version($*PERL.compiler.version.Str),
-                        :auth($*PERL.compiler.auth),
-                        :release($*PERL.compiler.release),
-                        :build-date($*PERL.compiler.build-date.Str),
-                        :codename($*PERL.compiler.codename),
+                        :backend({
+                            :engine($*VM.name),
+                            :version($*VM.version.Str)
+                        }),
+                        :archname( join('-', $*KERNEL.hardware, $*KERNEL.name) ),
+                        :variables({
+                            '$*REPO.repo-chain' => $*REPO.repo-chain,
+                        }),
+                        # TODO include critical distributions that are bundled
+                        # to either rakudo or zef. Right now I'm not sure what's
+                        # the best way to achieve this. The versions below should
+                        # be the versions that were used to test/install the dist.
+                        # :toolchain({
+                        #    'zef' => version
+                        #    'TAP' => version
+                        # }),
+                        # TODO include build output string, if available.
+                        # :build(Str),
+                    }),
+                    :system({
+                        :osname($*KERNEL.name),
+                        :osversion($*KERNEL.version.Str),
+                        :variables({
+                            :PATH(%*ENV<PATH>.Str),
+                            %*ENV.grep( *.key.starts-with("PERL" | "RAKUDO") ),
+                        }),
+
+                        # TODO add those once they become available:
+                        # :hostname(Str),        # hostname
+                        # :cpu_count(Str),       # how many CPUs and cores do we have
+                        # :cpu_type(Str),        # e.g. 'Intel Core i5'
+                        # :cpu_description(Str), # e.g. 'MacBook Air (1.3 GHz)
+                        # :filesystem(Str),      # FS where dist was tested
                     }),
                 }),
-                :vm({
-                    :name($*VM.name),
-                    :version($*VM.version.Str),
-                    :auth($*VM.auth),
-                    :config($*VM.config),
-                    :properties($*VM.?properties),
-                    :precomp-ext($*VM.precomp-ext),
-                    :precomp-target($*VM.precomp-target),
-                    :prefix($*VM.prefix.Str),
+                :result({
+                    :grade(so $candi.test-results.map(*.so).all ?? 'PASS' !! 'FAIL' ),
+                    :output({
+                        :configure( $candi.^find_method('configure-results') ?? $candi.configure-results.Str !! Str ),
+                        :build( $candi.^find_method('build-results') ?? $candi.build-results.Str !! Str ),
+                        :test( $candi.^find_method('test-results') ?? $candi.test-results.Str !! Str ),
+                        :install( $candi.^find_method('install-results') ?? $candi.install-results.Str !! Str ),
+                    }),
+
+                    # TODO we'd love to send:
+                    # :tests(Int),    # number of tests that ran (tests, not test files)
+                    # :failures(Int), # how many test failures
+                    # :skipped(Int),  # how many tests were skipped
+                    # :todo({
+                    #    :pass(Int), # how many tests marked as TODO have passed
+                    #    :fail(Int), # how many tests marked as TODO have failed
+                    # }),
+                    # :warnings(Int), # did we get any warnings? If so, how many?
+                    # :duration(Int), # how long did it take us to run the tests, in seconds
                 }),
-            }).encode );
+                :distribution({
+                    :name($candi.dist.name),
+                    :version(first *.defined, $candi.dist.meta<ver version>),
+
+                    # TODO we'd love to traverse through
+                    # $candi.dist.meta<depends> and turn it into (expected JSON):
+                    # [
+                    #   { "phase": "test", "name": "Some::Dist", "need": "0.1", "have": "3.2" },
+                    #   { "phase": "build", "name": "Other::Dist", "need": "1.23", "have": "1.77" },
+                    # ]
+                }),
+            }).encode);
 
             return $response.content(:force);
         }
@@ -71,23 +100,20 @@ class Zef::Reporter does Messenger does Reporter {
 
 =head1 NAME
 
-Zef::Reporter - blah blah blah
-
-=head1 SYNOPSIS
-
-  use Zef::Reporter;
+Zef::Reporter - send Perl 6 reports to CPAN Testers (using zef)
 
 =head1 DESCRIPTION
 
-Zef::Reporter is ...
+Zef::Reporter is a module to send installation success/failure reports to CPAN Testers.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Breno G. de Oliveira <garu@cpan.org>
+Breno G. de Oliveira (GARU)
+Nick Logan (UGEXE)
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2017 Breno G. de Oliveira
+Copyright 2017 Breno G. de Oliveira, Nick Logan
 
 This library is free software; you can redistribute it and/or modify it under the Artistic License 2.0.
 
