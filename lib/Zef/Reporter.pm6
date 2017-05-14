@@ -18,7 +18,9 @@ class Zef::Reporter does Messenger does Reporter {
                     :email( $*HOME.child(q|.cpanreporter/config.ini|).lines>>.split("=").grep( *[0] eq "email_from" ).map( *[1] )[0] )
                 }),
                 :environment({
-                    :user_agent( $?PACKAGE ~ ' ' ~ $?PACKAGE.^ver ),
+                    # TODO include ^ver on the user_agent as soon as we
+                    # can get it from META6.json
+                    :user_agent( $?PACKAGE ~ ' (beta)' ), # ~ $?PACKAGE.^ver ),
                     :language({
                         :name<Perl 6>,
                         :implementation($*PERL.compiler.name)
@@ -29,7 +31,7 @@ class Zef::Reporter does Messenger does Reporter {
                         }),
                         :archname( join('-', $*KERNEL.hardware, $*KERNEL.name) ),
                         :variables({
-                            '$*REPO.repo-chain' => $*REPO.repo-chain,
+                            '$*REPO.repo-chain' => $*REPO.repo-chain.Str,
                         }),
                         # TODO include critical distributions that are bundled
                         # to either rakudo or zef. Right now I'm not sure what's
@@ -39,7 +41,7 @@ class Zef::Reporter does Messenger does Reporter {
                         #    'zef' => version
                         #    'TAP' => version
                         # }),
-                        :build(Compiler.verbose-config.Str),
+                        # TODO uncomment --> :build(Compiler.verbose-config.Str),
                     }),
                     :system({
                         :osname($*KERNEL.name),
@@ -60,10 +62,22 @@ class Zef::Reporter does Messenger does Reporter {
                 :result({
                     :grade(so $candi.test-results.map(*.so).all ?? 'PASS' !! 'FAIL' ),
                     :output({
-                        :configure( $candi.^find_method('configure-results') ?? $candi.configure-results.Str !! Str ),
-                        :build( $candi.^find_method('build-results') ?? $candi.build-results.Str !! Str ),
-                        :test( $candi.^find_method('test-results') ?? $candi.test-results.Str !! Str ),
-                        :install( $candi.^find_method('install-results') ?? $candi.install-results.Str !! Str ),
+                        ($candi.^find_method('configure-results')
+                          ?? :configure($candi.configure-results.Str
+                          !! ()
+                        ),
+                        ($candi.^find_method('build-results')
+                          ?? :build($candi.build-results.Str)
+                          !! ()
+                        ),
+                        ($candi.^find_method('test-results')
+                          ?? :test($candi.test-results.Str)
+                          !! ()
+                        ),
+                        ($candi.^find_method('install-results')
+                          ?? :install($candi.install-results.Str)
+                          !! ()
+                        ),
                     }),
 
                     # TODO we'd love to send:
