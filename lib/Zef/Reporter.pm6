@@ -13,7 +13,7 @@ class Zef::Reporter does Messenger does Reporter {
         if self.probe {
             try require Net::HTTP::POST;
             my $candi := $event.<payload>;
-            my $response = ::('Net::HTTP::POST')("http://api.cpantesters.org/v3/report", body => to-json({
+            my %json = (
                 :reporter({
                     :email( $*HOME.child(q|.cpanreporter/config.ini|).lines>>.split("=").grep( *[0] eq "email_from" ).map( *[1] )[0] )
                 }),
@@ -22,7 +22,7 @@ class Zef::Reporter does Messenger does Reporter {
                     # can get it from META6.json
                     :user_agent( $?PACKAGE ~ ' (beta)' ), # ~ $?PACKAGE.^ver ),
                     :language({
-                        :name<Perl 6>,
+                        :name('Perl 6'),
                         :implementation($*PERL.compiler.name)
                         :version($*PERL.compiler.version.Str),
                         :backend({
@@ -60,25 +60,7 @@ class Zef::Reporter does Messenger does Reporter {
                     }),
                 }),
                 :result({
-                    :grade(so $candi.test-results.map(*.so).all ?? 'PASS' !! 'FAIL' ),
-                    :output({
-                        ($candi.^find_method('configure-results')
-                          ?? :configure($candi.configure-results.Str
-                          !! ()
-                        ),
-                        ($candi.^find_method('build-results')
-                          ?? :build($candi.build-results.Str)
-                          !! ()
-                        ),
-                        ($candi.^find_method('test-results')
-                          ?? :test($candi.test-results.Str)
-                          !! ()
-                        ),
-                        ($candi.^find_method('install-results')
-                          ?? :install($candi.install-results.Str)
-                          !! ()
-                        ),
-                    }),
+                    :grade(?$candi.test-results.map(*.so).all ?? 'pass' !! 'fail' ),
 
                     # TODO we'd love to send:
                     # :tests(Int),    # number of tests that ran (tests, not test files)
@@ -102,8 +84,15 @@ class Zef::Reporter does Messenger does Reporter {
                     #   { "phase": "build", "name": "Other::Dist", "need": "1.23", "have": "1.77" },
                     # ]
                 }),
-            }).encode);
+            );
+%json<result><output><configure> = $candi.configure-results.Str if $candi.^find_method('configure-results');
+%json<result><output><build>     = $candi.build-results.Str if $candi.^find_method('build-results');
+%json<result><output><test>      = $candi.test-results.Str if $candi.^find_method('test-results');
+%json<result><output><install>  = $candi.install-results.Str if $candi.^find_method('install-results');
+say %json.perl;
 
+my $response = ::('Net::HTTP::POST')("http://api.cpantesters.org/v3/report", body => to-json(%json).encode);
+#say $response.perl;
             return $response.content(:force);
         }
     }
