@@ -23,8 +23,8 @@ class Zef::Reporter does Messenger does Reporter {
                     :user_agent( $?PACKAGE ~ ' (beta)' ), # ~ $?PACKAGE.^ver ),
                     :language({
                         :name('Perl 6'),
-                        :implementation($*PERL.compiler.name)
-                        :version($*PERL.compiler.version.Str),
+                        :implementation($*PERL.compiler.name),
+                        :version("{$*PERL.compiler.version.Str}"),
                         :backend({
                             :engine($*VM.name),
                             :version($*VM.version.Str)
@@ -88,8 +88,8 @@ class Zef::Reporter does Messenger does Reporter {
 %json<result><output><configure> = $candi.configure-results.Str if $candi.^find_method('configure-results');
 %json<result><output><build>     = $candi.build-results.Str if $candi.^find_method('build-results');
 %json<result><output><test>      = $candi.test-results.Str if $candi.^find_method('test-results');
-%json<result><output><install>  = $candi.install-results.Str if $candi.^find_method('install-results');
-say %json.perl;
+%json<result><output><install>   = $candi.install-results.Str if $candi.^find_method('install-results');
+say %json<environment><language><version>;
 
 my $response = ::('Net::HTTP::POST')("http://api.cpantesters.org/v3/report", body => to-json(%json).encode);
 #say $response.perl;
