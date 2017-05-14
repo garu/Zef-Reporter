@@ -39,8 +39,7 @@ class Zef::Reporter does Messenger does Reporter {
                         #    'zef' => version
                         #    'TAP' => version
                         # }),
-                        # TODO include build output string, if available.
-                        # :build(Str),
+                        :build(Compiler.verbose-config.Str),
                     }),
                     :system({
                         :osname($*KERNEL.name),
