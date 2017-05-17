@@ -2,7 +2,7 @@ use v6;
 use Zef;
 use Net::HTTP::POST;
 
-class Zef::Reporter does Messenger does Reporter {
+class Zef::CPANReporter does Messenger does Reporter {
 
     method !config     { state $config = $*HOME.child(q|.cpanreporter/config.ini|).lines>>.split("=") }
     method !email_from { state $email_from = self!config.grep( *[0] eq "email_from" ).map( *[1] )[0] }
@@ -103,11 +103,11 @@ class Zef::Reporter does Messenger does Reporter {
 
 =head1 NAME
 
-Zef::Reporter - send Perl 6 reports to CPAN Testers (using zef)
+Zef::CPANReporter - send Perl 6 reports to CPAN Testers (using zef)
 
 =head1 DESCRIPTION
 
-Zef::Reporter is a module to send installation success/failure reports to CPAN Testers.
+Zef::CPANReporter is a module to send installation success/failure reports to CPAN Testers.
 
 =head1 AUTHORS
 

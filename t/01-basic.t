@@ -1,6 +1,6 @@
 use v6;
 use Test;
-use Zef::Reporter;
+use Zef::CPANReporter;
 
 pass "replace me";
 
