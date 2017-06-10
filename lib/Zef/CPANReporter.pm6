@@ -4,8 +4,13 @@ use Net::HTTP::POST;
 
 class Zef::CPANReporter does Messenger does Reporter {
 
-    method !config     { state $config = $*HOME.child(q|.cpanreporter/config.ini|).lines>>.split("=") }
-    method !email_from { state $email_from = self!config.grep( *[0] eq "email_from" ).map( *[1] )[0] || '' }
+    method !config {
+        state $config-file = $*HOME.child(q|.cpanreporter/config.ini|);
+        state $config      = ($config-file.e ?? $config-file.lines !! "email_from=anon@mailinator.com")>>.split("=");
+    }
+    method !email_from {
+        state $email_from = self!config.grep( *[0] eq "email_from" ).map( *[1] )[0] || die '`email_from=...` not found in ~/.cpanreporter/config.ini';
+    }
 
     method report($event) {
         my $candi := $event.<payload>;
