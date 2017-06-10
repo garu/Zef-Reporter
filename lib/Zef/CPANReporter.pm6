@@ -5,7 +5,7 @@ use Net::HTTP::POST;
 class Zef::CPANReporter does Messenger does Reporter {
 
     method !config     { state $config = $*HOME.child(q|.cpanreporter/config.ini|).lines>>.split("=") }
-    method !email_from { state $email_from = self!config.grep( *[0] eq "email_from" ).map( *[1] )[0] }
+    method !email_from { state $email_from = self!config.grep( *[0] eq "email_from" ).map( *[1] )[0] || '' }
 
     method report($event) {
         my $candi := $event.<payload>;
