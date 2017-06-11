@@ -22,7 +22,7 @@ class Zef::CPANReporter does Messenger does Reporter {
             :environment({
                 # TODO include ^ver on the user_agent as soon as we
                 # can get it from META6.json
-                :user_agent( $?PACKAGE ~ ($?PACKAGE.^ver // '*') ),
+                :user_agent( $?PACKAGE.^name ~ ($?PACKAGE.^ver // '*') ),
                 :language({
                     :name('Perl 6'),
                     :implementation($*PERL.compiler.name),
